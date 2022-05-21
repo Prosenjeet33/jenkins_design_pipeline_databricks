@@ -1,0 +1,28 @@
+databricks workspace import_dir <local build path> <remote workspace path>
+dbfs cp -r <local build path> <remote dbfs path>
+
+stage('Deploy') {
+  sh """#!/bin/bash
+        # Enable Conda environment for tests
+        source ${CONDAPATH}/bin/activate ${CONDAENV}
+
+        # Use Databricks CLI to deploy notebooks
+        databricks workspace import_dir ${BUILDPATH}/Workspace ${WORKSPACEPATH}
+
+        dbfs cp -r ${BUILDPATH}/Libraries/python ${DBFSPATH}
+     """
+  withCredentials([string(credentialsId: DBTOKEN, variable: 'TOKEN')]) {
+    sh """#!/bin/bash
+
+        #Get space delimited list of libraries
+        LIBS=\$(find ${BUILDPATH}/Libraries/python/ -name '*.whl' | sed 's#.*/##' | paste -sd " ")
+
+        #Script to uninstall, reboot if needed & instsall library
+        python3 ${SCRIPTPATH}/installWhlLibrary.py --workspace=${DBURL}\
+                  --token=$TOKEN\
+                  --clusterid=${CLUSTERID}\
+                  --libs=\$LIBS\
+                  --dbfspath=${DBFSPATH}
+       """
+  }
+}
