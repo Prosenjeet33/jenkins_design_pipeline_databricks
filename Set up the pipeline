@@ -1,0 +1,37 @@
+def GITREPO         = "/var/lib/jenkins/workspace/${env.JOB_NAME}"
+def GITREPOREMOTE   = "https://github.com/<repo>"
+def GITHUBCREDID    = "<github-token>"
+def CURRENTRELEASE  = "<release>"
+def DBTOKEN         = "<databricks-token>"
+def DBURL           = "https://<databricks-instance>"
+def SCRIPTPATH      = "${GITREPO}/Automation/Deployments"
+def NOTEBOOKPATH    = "${GITREPO}/Workspace"
+def LIBRARYPATH     = "${GITREPO}/Libraries"
+def BUILDPATH       = "${GITREPO}/Builds/${env.JOB_NAME}-${env.BUILD_NUMBER}"
+def OUTFILEPATH     = "${BUILDPATH}/Validation/Output"
+def TESTRESULTPATH  = "${BUILDPATH}/Validation/reports/junit"
+def WORKSPACEPATH   = "/Shared/<path>"
+def DBFSPATH        = "dbfs:<dbfs-path>"
+def CLUSTERID       = "<cluster-id>"
+def CONDAPATH       = "<conda-path>"
+def CONDAENV        = "<conda-env>"
+
+stage('Setup') {
+  withCredentials([string(credentialsId: DBTOKEN, variable: 'TOKEN')]) {
+  sh """#!/bin/bash
+      # Configure Conda environment for deployment & testing
+      source ${CONDAPATH}/bin/activate ${CONDAENV}
+
+      # Configure Databricks CLI for deployment
+      echo "${DBURL}
+      $TOKEN" | databricks configure --token
+
+      # Configure Databricks Connect for testing
+      echo "${DBURL}
+      $TOKEN
+      ${CLUSTERID}
+      0
+      15001" | databricks-connect configure
+     """
+  }
+}
